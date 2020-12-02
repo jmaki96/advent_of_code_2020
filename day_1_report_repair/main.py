@@ -1,10 +1,14 @@
 __doc__ = "Day 1 challenge for 2020: https://adventofcode.com/2020/day/1"
 
-import logging, time, argparse, math
+import logging, time, argparse, math, itertools
 
 logging.basicConfig(format="%(asctime)s - %(name)s - %(funcName)s - %(levelname)s - %(message)s")
 _logger = logging.getLogger(__name__)
-_logger.setLevel(logging.INFO)
+_logger.setLevel(logging.DEBUG)
+
+# globals
+recursions = 0
+iterations = 0
 
 def lazy_search(vals, expected_sum):
     """ Does a lazy double loop of a set of integers, finds a pair of integers that adds to expected sum and returns the product."""
@@ -22,7 +26,11 @@ def lazy_search(vals, expected_sum):
 
 def arbitrary_search(vals, expected_sum, combination_length):
     """ Does an optimized search of a set of integers and tries to find an arbitrarily sized set of integers that add up to the expected sum."""
+    global recursions
+    global iterations
 
+    recursions = 0
+    iterations = 0
     combinations = recursive_search(vals, [], combination_length)
 
     for combination in combinations:
@@ -31,14 +39,32 @@ def arbitrary_search(vals, expected_sum, combination_length):
             for i, val in enumerate(combination):
                 _logger.info("{0}: {1}".format(i, val))
             return math.prod(combination)
-    
+
     _logger.info("Didn't find a match that satisfied sum!")
     
     return None
 
+def itertools_search(vals, expected_sum, combination_length):
+
+    combinations = list(itertools.combinations(vals, combination_length))
+    for combination in combinations:
+        if sum(combination) == expected_sum:
+            _logger.info("Found match")
+            for i, val in enumerate(combination):
+                _logger.info("{0}: {1}".format(i, val))
+            return math.prod(combination)
+
+    _logger.info("Didn't find a match that satisfied sum!")
+    
+    return None
 
 def recursive_search(vals, current_combination, combination_length):
     """ Recursively peels values out of vals and reduces sum count to return all unique combinations."""
+
+    global recursions
+    global iterations
+
+    recursions += 1
 
     #_logger.debug("len vals {0}".format(len(vals)))
     #_logger.debug("len current combination {0}".format(len(current_combination)))
@@ -55,12 +81,14 @@ def recursive_search(vals, current_combination, combination_length):
 
         if additional_vals_needed == 1:
             for val in vals:
+                iterations += 1
                 combination = list(current_combination)  # Copy current list
                 combination.append(val)
                 rtn.append(combination)
             
         else:
             for i, val in enumerate(vals):  # more than 1 remaining, recurse
+                iterations += 1
                 combination = list(current_combination)  # Copy current list
                 combination.append(val)
                 rtn += recursive_search(vals[0:i] + vals[i+1:], combination, combination_length)
@@ -92,8 +120,26 @@ if __name__ == "__main__":
         else:
             _logger.info("Part 1 - Found answer: {0}".format(result))
 
+        start_timestamp = time.time()
         result = arbitrary_search(vals, int(args.value), 3)
+        end_timestamp = time.time()
 
+        _logger.info("arbitrary_search took {0:.2f}s".format(end_timestamp-start_timestamp))
+        _logger.debug("length of input: {0}".format(len(vals)))
+        _logger.debug("number of recursions: {0}".format(recursions))
+        _logger.debug("number of iterations: {0}".format(iterations))
+
+        if result is None:
+            raise ValueError("Failed to find match!")
+        else:
+            _logger.info("Part 2 - Found answer: {0}".format(result))
+
+        start_timestamp = time.time()
+        result = itertools_search(vals, int(args.value), 3)
+        end_timestamp = time.time()
+
+        _logger.info("itertools. took {0:.2f}s".format(end_timestamp-start_timestamp))
+        
         if result is None:
             raise ValueError("Failed to find match!")
         else:
